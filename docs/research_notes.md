@@ -7,7 +7,7 @@
 - EEG has standard systems including the "international 10-20 system"
 - ref and ground electrodes are used (e.g. nose and prefrontal lobe, respectively, in paper)
 - Sampling freqency of 1kHz seems consistent/reasonable as used in paper
-- Need notch filter to remove pwoer frequency interference
+- Need notch filter to remove power frequency interference
 - Complementary data like electromyogram (EMG) signals can be used on working muscles to validate "motor imagery"
 
 [^force-loads]: Wang, K., Wang, Z., Guo, Y. et al. A brain-computer interface driven by imagining different force loads on a single hand: an online feasibility study. J NeuroEngineering Rehabil 14, 93 (2017). https://doi.org/10.1186/s12984-017-0307-1  
