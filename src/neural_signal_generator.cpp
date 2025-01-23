@@ -11,49 +11,53 @@ public:
     explicit NeuralSignalGenerator(int samplePeriod = 1) : m_samplePeriod(samplePeriod) {}
 
     // Generate time-series data for the given action and number of signals
+    // Cluster-based signal generation function
     std::vector<std::array<int, 12>> generateSignals(const std::array<float, 8>& startCoords,
-                                                      const std::array<float, 8>& endCoords,
-                                                      int numSignals = 1024,
-                                                      const std::string& noiseType = "gaussian",
-                                                      float noiseAmplitude = 1.0f) {
+                                                    const std::array<float, 8>& endCoords,
+                                                    int numSignals = 1024,
+                                                    float clusterStrength = 0.5f) {
         // Initialize random number generator
         std::random_device rd;
         std::mt19937 gen(rd());
-        std::uniform_real_distribution<float> distribution(-noiseAmplitude, noiseAmplitude);
+        std::uniform_real_distribution<float> dist(0.0f, 1.0f);
 
-        int numSamples = static_cast<int>(endCoords[7] - startCoords[7]) / m_samplePeriod + 1;
+        // Define clusters and their corresponding neuron indices
+        const int numClusters = 5; // e.g., hand movement, arm movement, etc.
+        const int clusterSizes[] = {4, 3, 2, 2, 1}; // e.g., number of neurons in each cluster
+        std::vector<int> clusters[numClusters];
+        for (int i = 0; i < numClusters; ++i) {
+            for (int j = 0; j < clusterSizes[i]; ++j) {
+                clusters[i].push_back(i * clusterSizes[i] + j);
+            }
+        }
 
-        // Initialize data structure to hold time-series signals
+        // Initialize signal array
         std::vector<std::array<int, 12>> signals(numSignals);
 
+        // Generate signals for each neuron in a cluster-based manner
         for (int i = 0; i < numSignals; ++i) {
-            // Initialize signal with first sample from start position
-            for (int j = 0; j < 6; ++j) {
-                signals[i][j] = static_cast<int>(startCoords[j + 3] * 1024);
+            // Calculate cluster activation strength based on motion intent
+            float clusterActivation[numClusters];
+            for (int j = 0; j < numClusters; ++j) {
+                clusterActivation[j] =
+                    std::pow(std::sin(dist(gen)), 2) * clusterStrength +
+                    std::pow(std::cos(dist(gen)), 2) * (1 - clusterStrength);
             }
 
-            for (int t = m_samplePeriod; t <= endCoords[7]; t += m_samplePeriod) {
-                // Generate new sample based on the current position and previous signal values
-                float x = startCoords[0] + (endCoords[0] - startCoords[0]) * static_cast<float>(t) / numSamples;
-                float y = startCoords[1] + (endCoords[1] - startCoords[1]) * static_cast<float>(t) / numSamples;
-                float z = startCoords[2] + (endCoords[2] - startCoords[2]) * static_cast<float>(t) / numSamples;
-
-                // Add noise to the signal
-                if (noiseType == "gaussian") {
-                    std::normal_distribution<float> gaussianDistribution(0.0f, noiseAmplitude);
-                    signals[i][0] = static_cast<int>((x + gaussianDistribution(gen)) * 1024);
-                    signals[i][1] = static_cast<int>((y + gaussianDistribution(gen)) * 1024);
-                    signals[i][2] = static_cast<int>((z + gaussianDistribution(gen)) * 1024);
-                } else if (noiseType == "uniform") {
-                    std::uniform_real_distribution<float> uniformDistribution(-noiseAmplitude, noiseAmplitude);
-                    signals[i][0] = static_cast<int>((x + uniformDistribution(gen)) * 1024);
-                    signals[i][1] = static_cast<int>((y + uniformDistribution(gen)) * 1024);
-                    signals[i][2] = static_cast<int>((z + uniformDistribution(gen)) * 1024);
+            // Simulate neural activity based on cluster activation
+            for (int j = 0; j < numClusters; ++j) {
+                for (auto neuron : clusters[j]) {
+                    signals[i][neuron] =
+                        static_cast<int>(clusterActivation[j] *
+                                        (dist(gen) * 100 + 50)); // scale to [0, 150]
                 }
+            }
 
-                // Update signal values
-                for (int j = 0; j < 6; ++j) {
-                    signals[i][j + 3] = static_cast<int>(x * 1024);
+            // Introduce some randomness and noise to the signal
+            for (auto& neuron : signals[i]) {
+                neuron = std::max(0, std::min(neuron, 200));
+                if (dist(gen) < 0.1f) { // 10% chance of adding noise
+                    neuron += dist(gen) * 50 - 25;
                 }
             }
         }
